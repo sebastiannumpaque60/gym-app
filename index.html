@@ -1,254 +1,62 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Gym App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 15px;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    .card {
-      background: #fff;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 8px;
-    }
-    button, select, input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      font-size: 16px;
-    }
-    .hidden {
-      display: none;
-    }
-    .series input {
-      width: 80px;
-      margin-right: 5px;
-    }
-    #cronometro {
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-  </style>
-</head>
+  // 🔥 TU CONFIGURACIÓN REAL (YA PUESTA)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAx8PXAhu-Zsd8Iez7EyShVFyq92jlXLOo",
+    authDomain: "gym-app-4137a.firebaseapp.com",
+    projectId: "gym-app-4137a",
+    storageBucket: "gym-app-4137a.firebasestorage.app",
+    messagingSenderId: "58172819530",
+    appId: "1:58172819530:web:f4497299ce9de909e2beb3"
+  };
 
-<body>
+  // Inicializar Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
 
-<h1>💪 Gym App</h1>
-
-<div id="cronometro">⏱ Tiempo: <span id="tiempo">00:00</span></div>
-
-<button onclick="volverMenu()">⬅ Volver al menú</button>
-
-<div class="card" id="menu">
-  <button onclick="mostrarVista('entrenar')">🔥 Iniciar entrenamiento</button>
-  <button onclick="mostrarVista('agregar')">➕ Agregar ejercicio</button>
-  <button onclick="mostrarVista('progreso')">📊 Ver progreso</button>
-</div>
-
-<div id="entrenar" class="card hidden">
-  <h2>Entrenamiento</h2>
-
-  <label>Grupo muscular</label>
-  <select id="grupoSelect"></select>
-
-  <label>Ejercicio</label>
-  <select id="ejercicioSelect"></select>
-
-  <label>Peso (kg)</label>
-  <input type="number" id="peso">
-
-  <label>Número de series</label>
-  <input type="number" id="numSeries" min="1" onchange="generarSeries()">
-
-  <div id="series" class="series"></div>
-
-  <button onclick="guardarEntrenamiento()">Guardar ejercicio</button>
-  <button onclick="finalizarDia()">Finalizar día</button>
-</div>
-
-<div id="agregar" class="card hidden">
-  <h2>Agregar ejercicio</h2>
-
-  <label>Grupo muscular</label>
-  <input type="text" id="nuevoGrupo">
-
-  <label>Ejercicio</label>
-  <input type="text" id="nuevoEjercicio">
-
-  <label>Foto del ejercicio</label>
-  <input type="file" accept="image/*">
-
-  <button onclick="agregarEjercicio()">Guardar</button>
-</div>
-
-<div id="progreso" class="card hidden">
-  <h2>Resumen</h2>
-  <p id="resumen"></p>
-  <div id="calendario"></div>
-</div>
-
-<script>
-  let catalogo = JSON.parse(localStorage.getItem("catalogo")) || {};
-  let entrenamientos = JSON.parse(localStorage.getItem("entrenamientos")) || [];
-
-  let segundos = 0;
-  let activo = true;
-
-  setInterval(() => {
-    if (!activo) return;
-    segundos++;
-    let m = String(Math.floor(segundos / 60)).padStart(2, "0");
-    let s = String(segundos % 60).padStart(2, "0");
-    document.getElementById("tiempo").innerText = `${m}:${s}`;
-  }, 1000);
-
-  function mostrarVista(id) {
-    document.querySelectorAll(".card").forEach(c => c.classList.add("hidden"));
-    document.getElementById(id).classList.remove("hidden");
-    if (id === "entrenar") cargarSelects();
-    if (id === "progreso") mostrarProgreso();
-  }
-
-  function volverMenu() {
-    document.querySelectorAll(".card").forEach(c => c.classList.add("hidden"));
-    document.getElementById("menu").classList.remove("hidden");
-  }
-
-  function cargarSelects() {
-    const g = document.getElementById("grupoSelect");
-    const e = document.getElementById("ejercicioSelect");
-    g.innerHTML = "";
-    e.innerHTML = "";
-
-    Object.keys(catalogo).forEach(grupo => {
-      let opt = document.createElement("option");
-      opt.value = grupo;
-      opt.textContent = grupo;
-      g.appendChild(opt);
-    });
-
-    g.onchange = () => {
-      e.innerHTML = "";
-      (catalogo[g.value] || []).forEach(ex => {
-        let opt = document.createElement("option");
-        opt.value = ex;
-        opt.textContent = ex;
-        e.appendChild(opt);
-      });
-    };
-
-    if (g.options.length) g.dispatchEvent(new Event("change"));
-  }
-
-  function generarSeries() {
-    const cont = document.getElementById("series");
-    cont.innerHTML = "";
-    let n = Number(document.getElementById("numSeries").value);
-    for (let i = 1; i <= n; i++) {
-      cont.innerHTML += `Serie ${i}: <input type="number" id="rep${i}" placeholder="reps"><br>`;
-    }
-  }
-
-  function guardarEntrenamiento() {
-    let grupo = grupoSelect.value;
-    let ejercicio = ejercicioSelect.value;
-    let peso = Number(peso.value);
-    let n = Number(numSeries.value);
-    let reps = [];
-
-    for (let i = 1; i <= n; i++) {
-      reps.push(Number(document.getElementById("rep" + i).value));
-    }
-
-    let fecha = new Date().toISOString().slice(0,10);
-
-    let anterior = entrenamientos.find(e => e.grupo === grupo && e.ejercicio === ejercicio);
-    if (anterior) {
-      let a = anterior.reps.reduce((x,y)=>x+y)/anterior.reps.length;
-      let b = reps.reduce((x,y)=>x+y)/reps.length;
-      if (b > a) alert("🔥 Excelente, mejoraste");
-      else if (b === a) alert("👌 Te mantuviste");
-      else alert("💪 Bajaste un poco, sigue");
-    }
-
-    entrenamientos.push({ grupo, ejercicio, peso, reps, fecha });
-    localStorage.setItem("entrenamientos", JSON.stringify(entrenamientos));
-  }
-
-  function agregarEjercicio() {
-    let g = nuevoGrupo.value;
-    let e = nuevoEjercicio.value;
-    if (!catalogo[g]) catalogo[g] = [];
-    catalogo[g].push(e);
-    localStorage.setItem("catalogo", JSON.stringify(catalogo));
-    alert("Ejercicio guardado");
-  }
-
-  function finalizarDia() {
-    activo = false;
-    alert("🏆 Gran trabajo hoy, sigue así");
-  }
-
-  function mostrarProgreso() {
-    resumen.innerText = `Has entrenado ${entrenamientos.length} veces.`;
-  }
-</script>
-
-</body>
-  <script type="module">
-  import { 
-    collection, 
-    addDoc, 
-    serverTimestamp 
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-  import { 
-    getAuth, 
-    onAuthStateChanged 
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-  const auth = getAuth();
+  const resumen = document.getElementById("resumen");
   let usuarioActual = null;
 
-  onAuthStateChanged(auth, (user) => {
+  // Login automático
+  signInAnonymously(auth);
+
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       usuarioActual = user;
+      mostrarProgreso();
     }
   });
 
+  // Guardar entrenamiento
   window.guardarEntrenamiento = async function () {
     if (!usuarioActual) {
-      alert("Debes iniciar sesión");
+      alert("Usuario no autenticado");
       return;
     }
 
-    const ejercicio = document.getElementById("ejercicio").value;
-    const peso = document.getElementById("peso").value;
-    const repeticiones = document.getElementById("repeticiones").value;
+    await addDoc(collection(db, "entrenamientos"), {
+      uid: usuarioActual.uid,
+      fecha: serverTimestamp()
+    });
 
-    await addDoc(
-      collection(db, "usuarios", usuarioActual.uid, "entrenamientos"),
-      {
-        ejercicio: ejercicio,
-        peso: peso,
-        repeticiones: repeticiones,
-        fecha: serverTimestamp()
-      }
+    mostrarProgreso();
+    alert("💪 Entrenamiento guardado");
+  };
+
+  // Mostrar progreso
+  async function mostrarProgreso() {
+    if (!usuarioActual) return;
+
+    const q = query(
+      collection(db, "entrenamientos"),
+      where("uid", "==", usuarioActual.uid)
     );
 
-    alert("Entrenamiento guardado 💪");
-  };
+    const snap = await getDocs(q);
+    resumen.innerText = `Has entrenado ${snap.size} veces 🔥`;
+  }
 </script>
-
-</html>
