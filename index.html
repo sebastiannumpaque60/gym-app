@@ -1,92 +1,208 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Gym App</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px; }
-h1 { text-align:center; }
-button { padding:10px 15px; margin:5px; cursor:pointer; }
-.card { background:#fff; padding:15px; margin:10px 0; border-radius:8px; }
-.hidden { display:none; }
-</style>
+  <meta charset="UTF-8">
+  <title>Gym App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 15px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .card {
+      background: #fff;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+    }
+    button, select, input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      font-size: 16px;
+    }
+    .hidden {
+      display: none;
+    }
+    .series input {
+      width: 80px;
+      margin-right: 5px;
+    }
+    #cronometro {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
+
 <body>
 
-<h1>🏋️ Gym App</h1>
+<h1>💪 Gym App</h1>
 
-<div class="card">
-  <button onclick="mostrar('agregar')">➕ Agregar ejercicio</button>
-  <button onclick="mostrar('entrenar')">🔥 Iniciar entrenamiento</button>
-</div>
+<div id="cronometro">⏱ Tiempo: <span id="tiempo">00:00</span></div>
 
-<div id="agregar" class="card hidden">
-  <h3>Agregar ejercicio</h3>
-  <input id="musculo" placeholder="Grupo muscular"><br><br>
-  <input id="ejercicio" placeholder="Ejercicio"><br><br>
-  <button onclick="guardarEjercicio()">Guardar</button>
+<button onclick="volverMenu()">⬅ Volver al menú</button>
+
+<div class="card" id="menu">
+  <button onclick="mostrarVista('entrenar')">🔥 Iniciar entrenamiento</button>
+  <button onclick="mostrarVista('agregar')">➕ Agregar ejercicio</button>
+  <button onclick="mostrarVista('progreso')">📊 Ver progreso</button>
 </div>
 
 <div id="entrenar" class="card hidden">
-  <h3>Registrar entrenamiento</h3>
-  <select id="listaEjercicios"></select><br><br>
-  <input id="series" type="number" placeholder="Series"><br><br>
-  <input id="reps" type="number" placeholder="Repeticiones"><br><br>
-  <button onclick="guardarEntrenamiento()">Finalizar día</button>
+  <h2>Entrenamiento</h2>
+
+  <label>Grupo muscular</label>
+  <select id="grupoSelect"></select>
+
+  <label>Ejercicio</label>
+  <select id="ejercicioSelect"></select>
+
+  <label>Peso (kg)</label>
+  <input type="number" id="peso">
+
+  <label>Número de series</label>
+  <input type="number" id="numSeries" min="1" onchange="generarSeries()">
+
+  <div id="series" class="series"></div>
+
+  <button onclick="guardarEntrenamiento()">Guardar ejercicio</button>
+  <button onclick="finalizarDia()">Finalizar día</button>
 </div>
 
-<div id="mensaje" class="card hidden"></div>
+<div id="agregar" class="card hidden">
+  <h2>Agregar ejercicio</h2>
+
+  <label>Grupo muscular</label>
+  <input type="text" id="nuevoGrupo">
+
+  <label>Ejercicio</label>
+  <input type="text" id="nuevoEjercicio">
+
+  <label>Foto del ejercicio</label>
+  <input type="file" accept="image/*">
+
+  <button onclick="agregarEjercicio()">Guardar</button>
+</div>
+
+<div id="progreso" class="card hidden">
+  <h2>Resumen</h2>
+  <p id="resumen"></p>
+  <div id="calendario"></div>
+</div>
 
 <script>
-let ejercicios = JSON.parse(localStorage.getItem('ejercicios') || '[]');
-let entrenos = JSON.parse(localStorage.getItem('entrenos') || '[]');
+  let catalogo = JSON.parse(localStorage.getItem("catalogo")) || {};
+  let entrenamientos = JSON.parse(localStorage.getItem("entrenamientos")) || [];
 
-function mostrar(id){
-  document.querySelectorAll('.card').forEach(c=>c.classList.add('hidden'));
-  document.querySelector('h1').classList.remove('hidden');
-  document.getElementById(id).classList.remove('hidden');
-  if(id==='entrenar') cargarEjercicios();
-}
+  let segundos = 0;
+  let activo = true;
 
-function guardarEjercicio(){
-  const musculo = musculoInput.value;
-  const ejercicio = ejercicioInput.value;
-  ejercicios.push({musculo, ejercicio});
-  localStorage.setItem('ejercicios', JSON.stringify(ejercicios));
-  alert('Ejercicio guardado');
-}
+  setInterval(() => {
+    if (!activo) return;
+    segundos++;
+    let m = String(Math.floor(segundos / 60)).padStart(2, "0");
+    let s = String(segundos % 60).padStart(2, "0");
+    document.getElementById("tiempo").innerText = `${m}:${s}`;
+  }, 1000);
 
-function cargarEjercicios(){
-  listaEjercicios.innerHTML='';
-  ejercicios.forEach((e,i)=>{
-    const opt=document.createElement('option');
-    opt.value=i;
-    opt.textContent=`${e.musculo} - ${e.ejercicio}`;
-    listaEjercicios.appendChild(opt);
-  });
-}
-
-function guardarEntrenamiento(){
-  const hoy = new Date().toISOString().split('T')[0];
-  const ej = ejercicios[listaEjercicios.value];
-  const s = Number(series.value);
-  const r = Number(reps.value);
-
-  let anterior = entrenos.filter(t=>t.ejercicio===ej.ejercicio).slice(-1)[0];
-  let msg = "Buen trabajo 💪";
-  if(anterior){
-    if(r > anterior.reps) msg = "🔥 Excelente, mejoraste!";
-    else if(r === anterior.reps) msg = "👍 Mantienes el nivel";
-    else msg = "⚠️ Bajaste un poco, ánimo";
+  function mostrarVista(id) {
+    document.querySelectorAll(".card").forEach(c => c.classList.add("hidden"));
+    document.getElementById(id).classList.remove("hidden");
+    if (id === "entrenar") cargarSelects();
+    if (id === "progreso") mostrarProgreso();
   }
 
-  entrenos.push({fecha:hoy, ejercicio:ej.ejercicio, series:s, reps:r});
-  localStorage.setItem('entrenos', JSON.stringify(entrenos));
+  function volverMenu() {
+    document.querySelectorAll(".card").forEach(c => c.classList.add("hidden"));
+    document.getElementById("menu").classList.remove("hidden");
+  }
 
-  mensaje.textContent = msg;
-  mensaje.classList.remove('hidden');
-}
+  function cargarSelects() {
+    const g = document.getElementById("grupoSelect");
+    const e = document.getElementById("ejercicioSelect");
+    g.innerHTML = "";
+    e.innerHTML = "";
+
+    Object.keys(catalogo).forEach(grupo => {
+      let opt = document.createElement("option");
+      opt.value = grupo;
+      opt.textContent = grupo;
+      g.appendChild(opt);
+    });
+
+    g.onchange = () => {
+      e.innerHTML = "";
+      (catalogo[g.value] || []).forEach(ex => {
+        let opt = document.createElement("option");
+        opt.value = ex;
+        opt.textContent = ex;
+        e.appendChild(opt);
+      });
+    };
+
+    if (g.options.length) g.dispatchEvent(new Event("change"));
+  }
+
+  function generarSeries() {
+    const cont = document.getElementById("series");
+    cont.innerHTML = "";
+    let n = Number(document.getElementById("numSeries").value);
+    for (let i = 1; i <= n; i++) {
+      cont.innerHTML += `Serie ${i}: <input type="number" id="rep${i}" placeholder="reps"><br>`;
+    }
+  }
+
+  function guardarEntrenamiento() {
+    let grupo = grupoSelect.value;
+    let ejercicio = ejercicioSelect.value;
+    let peso = Number(peso.value);
+    let n = Number(numSeries.value);
+    let reps = [];
+
+    for (let i = 1; i <= n; i++) {
+      reps.push(Number(document.getElementById("rep" + i).value));
+    }
+
+    let fecha = new Date().toISOString().slice(0,10);
+
+    let anterior = entrenamientos.find(e => e.grupo === grupo && e.ejercicio === ejercicio);
+    if (anterior) {
+      let a = anterior.reps.reduce((x,y)=>x+y)/anterior.reps.length;
+      let b = reps.reduce((x,y)=>x+y)/reps.length;
+      if (b > a) alert("🔥 Excelente, mejoraste");
+      else if (b === a) alert("👌 Te mantuviste");
+      else alert("💪 Bajaste un poco, sigue");
+    }
+
+    entrenamientos.push({ grupo, ejercicio, peso, reps, fecha });
+    localStorage.setItem("entrenamientos", JSON.stringify(entrenamientos));
+  }
+
+  function agregarEjercicio() {
+    let g = nuevoGrupo.value;
+    let e = nuevoEjercicio.value;
+    if (!catalogo[g]) catalogo[g] = [];
+    catalogo[g].push(e);
+    localStorage.setItem("catalogo", JSON.stringify(catalogo));
+    alert("Ejercicio guardado");
+  }
+
+  function finalizarDia() {
+    activo = false;
+    alert("🏆 Gran trabajo hoy, sigue así");
+  }
+
+  function mostrarProgreso() {
+    resumen.innerText = `Has entrenado ${entrenamientos.length} veces.`;
+  }
 </script>
 
 </body>
