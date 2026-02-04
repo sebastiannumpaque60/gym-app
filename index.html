@@ -206,4 +206,49 @@
 </script>
 
 </body>
+  <script type="module">
+  import { 
+    collection, 
+    addDoc, 
+    serverTimestamp 
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  import { 
+    getAuth, 
+    onAuthStateChanged 
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  const auth = getAuth();
+  let usuarioActual = null;
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      usuarioActual = user;
+    }
+  });
+
+  window.guardarEntrenamiento = async function () {
+    if (!usuarioActual) {
+      alert("Debes iniciar sesión");
+      return;
+    }
+
+    const ejercicio = document.getElementById("ejercicio").value;
+    const peso = document.getElementById("peso").value;
+    const repeticiones = document.getElementById("repeticiones").value;
+
+    await addDoc(
+      collection(db, "usuarios", usuarioActual.uid, "entrenamientos"),
+      {
+        ejercicio: ejercicio,
+        peso: peso,
+        repeticiones: repeticiones,
+        fecha: serverTimestamp()
+      }
+    );
+
+    alert("Entrenamiento guardado 💪");
+  };
+</script>
+
 </html>
