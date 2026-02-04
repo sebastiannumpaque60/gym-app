@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Gym App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px; }
+h1 { text-align:center; }
+button { padding:10px 15px; margin:5px; cursor:pointer; }
+.card { background:#fff; padding:15px; margin:10px 0; border-radius:8px; }
+.hidden { display:none; }
+</style>
+</head>
+<body>
+
+<h1>🏋️ Gym App</h1>
+
+<div class="card">
+  <button onclick="mostrar('agregar')">➕ Agregar ejercicio</button>
+  <button onclick="mostrar('entrenar')">🔥 Iniciar entrenamiento</button>
+</div>
+
+<div id="agregar" class="card hidden">
+  <h3>Agregar ejercicio</h3>
+  <input id="musculo" placeholder="Grupo muscular"><br><br>
+  <input id="ejercicio" placeholder="Ejercicio"><br><br>
+  <button onclick="guardarEjercicio()">Guardar</button>
+</div>
+
+<div id="entrenar" class="card hidden">
+  <h3>Registrar entrenamiento</h3>
+  <select id="listaEjercicios"></select><br><br>
+  <input id="series" type="number" placeholder="Series"><br><br>
+  <input id="reps" type="number" placeholder="Repeticiones"><br><br>
+  <button onclick="guardarEntrenamiento()">Finalizar día</button>
+</div>
+
+<div id="mensaje" class="card hidden"></div>
+
+<script>
+let ejercicios = JSON.parse(localStorage.getItem('ejercicios') || '[]');
+let entrenos = JSON.parse(localStorage.getItem('entrenos') || '[]');
+
+function mostrar(id){
+  document.querySelectorAll('.card').forEach(c=>c.classList.add('hidden'));
+  document.querySelector('h1').classList.remove('hidden');
+  document.getElementById(id).classList.remove('hidden');
+  if(id==='entrenar') cargarEjercicios();
+}
+
+function guardarEjercicio(){
+  const musculo = musculoInput.value;
+  const ejercicio = ejercicioInput.value;
+  ejercicios.push({musculo, ejercicio});
+  localStorage.setItem('ejercicios', JSON.stringify(ejercicios));
+  alert('Ejercicio guardado');
+}
+
+function cargarEjercicios(){
+  listaEjercicios.innerHTML='';
+  ejercicios.forEach((e,i)=>{
+    const opt=document.createElement('option');
+    opt.value=i;
+    opt.textContent=`${e.musculo} - ${e.ejercicio}`;
+    listaEjercicios.appendChild(opt);
+  });
+}
+
+function guardarEntrenamiento(){
+  const hoy = new Date().toISOString().split('T')[0];
+  const ej = ejercicios[listaEjercicios.value];
+  const s = Number(series.value);
+  const r = Number(reps.value);
+
+  let anterior = entrenos.filter(t=>t.ejercicio===ej.ejercicio).slice(-1)[0];
+  let msg = "Buen trabajo 💪";
+  if(anterior){
+    if(r > anterior.reps) msg = "🔥 Excelente, mejoraste!";
+    else if(r === anterior.reps) msg = "👍 Mantienes el nivel";
+    else msg = "⚠️ Bajaste un poco, ánimo";
+  }
+
+  entrenos.push({fecha:hoy, ejercicio:ej.ejercicio, series:s, reps:r});
+  localStorage.setItem('entrenos', JSON.stringify(entrenos));
+
+  mensaje.textContent = msg;
+  mensaje.classList.remove('hidden');
+}
+</script>
+
+</body>
+</html>
